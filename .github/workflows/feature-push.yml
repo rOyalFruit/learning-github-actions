@@ -22,7 +22,6 @@ jobs:
           distribution: 'adopt'
       - name: Build and Test Backend
         run: |
-          cd backend
           ./gradlew build test
 
   checkstyle:
