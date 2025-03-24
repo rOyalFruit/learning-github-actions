@@ -2,8 +2,8 @@
 name: Feature Branch Push
 
 permissions:
-  contents: read
-  checks: write
+  test: write
+  checkstyle: write
 
 on:
   push:
