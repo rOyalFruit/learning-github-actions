@@ -1,6 +1,10 @@
 # .github/workflows/feature-push.yml
 name: Feature Branch Push
 
+permissions:
+  contents: read
+  checks: write
+
 on:
   push:
     branches:
@@ -20,3 +24,12 @@ jobs:
         run: |
           cd backend
           ./gradlew build test
+
+  checkstyle:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Flush Checkstyle report on the status checks
+        uses: lcollins/checkstyle-github-action@v3.1.0
+        with:
+          path: '**/build/reports/checkstyle/**.xml'
+          title: 📝 Checkstyle report
