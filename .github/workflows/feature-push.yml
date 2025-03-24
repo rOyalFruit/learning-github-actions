@@ -1,0 +1,35 @@
+# .github/workflows/feature-push.yml
+name: Feature Branch Push
+
+permissions:
+  contents: read
+  checks: write
+
+on:
+  push:
+    branches:
+      - 'feat/**'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up JDK 17
+        uses: actions/setup-java@v3
+        with:
+          java-version: '17'
+          distribution: 'adopt'
+      - name: Build and Test Backend
+        run: |
+          cd backend
+          ./gradlew build test
+
+  checkstyle:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Flush Checkstyle report on the status checks
+        uses: lcollins/checkstyle-github-action@v3.1.0
+        with:
+          path: '**/build/reports/checkstyle/**.xml'
+          title: 📝 Checkstyle report
