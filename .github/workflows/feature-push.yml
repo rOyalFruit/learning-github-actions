@@ -95,11 +95,9 @@ jobs:
 
       - name: Run JaCoCo
         if: matrix.tool == 'jacoco'
-        continue-on-error: true
         run: ./gradlew jacocoTestReport
       - name: Publish JaCoCo report
         if: matrix.tool == 'jacoco'
-        continue-on-error: true
         uses: PavanMudigonda/jacoco-reporter@v5.0
         with:
           coverage_results_path: 'build/reports/jacoco/test/jacocoTestReport.xml'
