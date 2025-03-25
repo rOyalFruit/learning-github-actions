@@ -238,4 +238,6 @@ jobs:
         uses: mshick/add-pr-comment@v2
         with:
           message: ${{ steps.store.outputs.comment }}
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          message-id: "code-quality-summary"
+
+
