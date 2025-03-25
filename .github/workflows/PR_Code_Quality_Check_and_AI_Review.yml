@@ -158,8 +158,8 @@ jobs:
           for tool in checkstyle pmd spotbugs jacoco; do
             echo "## $tool Report" >> quality_summary.txt
             echo "------------------------" >> quality_summary.txt
-            if [ -d "./quality-reports/$tool" ]; then
-              cat ./quality-reports/$tool/**/*.xml >> quality_summary.txt
+            if [ -d "./quality-reports/$tool" ] && [ "$(find ./quality-reports/$tool -type f -name "*.xml" | wc -l)" -gt 0 ]; then
+              find ./quality-reports/$tool -type f -name "*.xml" -exec cat {} \; >> quality_summary.txt
             else
               echo "No report found for $tool" >> quality_summary.txt
             fi
