@@ -101,4 +101,5 @@ jobs:
         uses: PavanMudigonda/jacoco-reporter@v5.0
         with:
           coverage_results_path: 'build/reports/jacoco/test/jacocoTestReport.xml'
+          coverage_report_name: Coverage
           coverage_report_title: 📖 JaCoCo Coverage Report
