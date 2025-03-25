@@ -2,11 +2,11 @@ name: PR Code Quality and AI Summary
 
 on:
   pull_request:
-    types: [ opened, synchronize ]  # PR이 열리거나 업데이트될 때 트리거
+    types: [ opened, synchronize ]
 
 permissions:
-  contents: read  # 리포지토리의 콘텐츠를 읽을 수 있음
-  pull-requests: write  # PR에 댓글을 작성할 수 있음
+  contents: read
+  pull-requests: write
   checks: write
 
 jobs:
@@ -66,47 +66,52 @@ jobs:
       - name: Run Checkstyle
         if: matrix.tool == 'checkstyle'
         run: ./gradlew checkstyleMain checkstyleTest
-      - name: Publish Checkstyle report
+      - name: Save Checkstyle report
         if: matrix.tool == 'checkstyle'
-        uses: lcollins/checkstyle-github-action@v3.1.0
-        with:
-          path: '**/build/reports/checkstyle/**.xml'
-          title: 📝 Checkstyle report
+        run: |
+          mkdir -p ./quality-reports
+          cp -R **/build/reports/checkstyle ./quality-reports/checkstyle
 
       - name: Run PMD
         if: matrix.tool == 'pmd'
         run: ./gradlew pmdMain pmdTest
-      - name: Publish PMD report
+      - name: Save PMD report
         if: matrix.tool == 'pmd'
-        uses: lcollins/pmd-github-action@v3.1.0
-        with:
-          path: '**/build/reports/pmd/**.xml'
-          title: 🔍 PMD report
+        run: |
+          mkdir -p ./quality-reports
+          cp -R **/build/reports/pmd ./quality-reports/pmd
 
       - name: Run SpotBugs
         if: matrix.tool == 'spotbugs'
         run: ./gradlew spotbugsMain spotbugsTest
-      - name: Publish SpotBugs report
+      - name: Save SpotBugs report
         if: matrix.tool == 'spotbugs'
-        uses: lcollins/spotbugs-github-action@v3.1.0
-        with:
-          path: '**/build/reports/spotbugs/**.xml'
-          title: 🐞 SpotBugs report
+        run: |
+          mkdir -p ./quality-reports
+          cp -R **/build/reports/spotbugs ./quality-reports/spotbugs
 
       - name: Run JaCoCo
         if: matrix.tool == 'jacoco'
         run: ./gradlew jacocoTestReport
-      - name: Publish JaCoCo report
+      - name: Save JaCoCo report
         if: matrix.tool == 'jacoco'
-        uses: PavanMudigonda/jacoco-reporter@v5.0
-        with:
-          coverage_results_path: 'build/reports/jacoco/test/jacocoTestReport.xml'
-          coverage_report_name: Coverage
-          coverage_report_title: 📖 JaCoCo Coverage Report
+        run: |
+          mkdir -p ./quality-reports
+          cp -R build/reports/jacoco ./quality-reports/jacoco
 
-  ai-summary:
-    needs: code-quality  # 코드 품질 검사 완료 후 실행됨
+      - name: Upload quality reports
+        uses: actions/upload-artifact@v3
+        with:
+          name: quality-reports
+          path: ./quality-reports
+
+  pr-summary:
+    needs: code-quality
     runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      pull-requests: write
 
     steps:
       - name: Checkout Repository
@@ -114,81 +119,101 @@ jobs:
 
       - name: Set up Node.js
         uses: actions/setup-node@v3
-        with:
-          node-version: '18'  # 최신 Node.js 버전 설정
 
-      - name: Install Dependencies
+      - name: Install Gemini AI Dependencies
         run: npm install @google/generative-ai
 
-      - name: Generate AI Review
-        id: generate-review
+      - name: Download quality reports
+        uses: actions/download-artifact@v3
+        with:
+          name: quality-reports
+          path: ./quality-reports
+
+      - name: Prepare quality reports for AI
         run: |
-          node -e "
-          const fs = require('fs');
-          const { GoogleGenerativeAI } = require('@google/generative-ai');
-          const genAI = new GoogleGenerativeAI("${{ secrets.GEMINI_API_KEY }}");  // Gemini API 키로 생성자 인스턴스 생성
-          const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });  // Gemini 모델 설정
+          echo "Code Quality Reports:" > quality_summary.txt
+          echo "========================" >> quality_summary.txt
+          for tool in checkstyle pmd spotbugs jacoco; do
+            echo "## $tool Report" >> quality_summary.txt
+            echo "------------------------" >> quality_summary.txt
+            if [ -d "./quality-reports/$tool" ]; then
+              cat ./quality-reports/$tool/**/*.xml >> quality_summary.txt
+            else
+              echo "No report found for $tool" >> quality_summary.txt
+            fi
+            echo "" >> quality_summary.txt
+          done
 
-          const readReport = (filePath) => {
-            try {
-              return fs.readFileSync(filePath, 'utf8');
-            } catch (error) {
-              console.error(\`Error reading \${filePath}:\`, error);
-              return '';
-            }
-          };
+      - name: Call Gemini API to Generate Quality Summary
+        id: gemini_review
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require("fs");
+            const quality_output = fs.readFileSync("quality_summary.txt", 'utf8');
 
-          const reports = {
-            checkstyle: readReport('build/reports/checkstyle/main.xml'),
-            pmd: readReport('build/reports/pmd/main.xml'),
-            spotbugs: readReport('build/reports/spotbugs/main.xml'),
-            jacoco: readReport('build/reports/jacoco/test/jacocoTestReport.xml'),
-          };
+            const { GoogleGenerativeAI } = require("@google/generative-ai");
+            const genAI = new GoogleGenerativeAI("${{ secrets.GEMINI_API_KEY }}");
+            const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
-          const prompt = \`
-            다음 정보를 기반으로 코드 품질 검사 결과를 분석해주세요.
-            - Checkstyle:\n\${reports.checkstyle}
-            - PMD:\n\${reports.pmd}
-            - SpotBugs:\n\${reports.spotbugs}
-            - JaCoCo:\n\${reports.jacoco}
+            let prompt = `
+              다음은 깃허브 PR에 대한 코드 품질 검사 결과입니다.
+              각 도구(Checkstyle, PMD, SpotBugs, JaCoCo)의 결과를 분석하고, 주요 문제점과 개선사항을 요약해 주세요.
 
-            주요 문제점 정리, 개선사항 제시, 종합 평가를 마크다운 형식으로 작성해주세요.
-          \`;
+              요약은 다음 형식을 따라주세요:
 
-          async function generateReview() {
+              ### 코드 품질 검사 요약
+
+              #### 전체 요약
+              (전반적인 코드 품질 상태에 대한 간략한 설명)
+
+              #### 도구별 주요 발견사항
+              1. Checkstyle:
+                 - (주요 스타일 문제점 나열)
+              2. PMD:
+                 - (주요 코드 품질 문제점 나열)
+              3. SpotBugs:
+                 - (주요 버그 가능성 나열)
+              4. JaCoCo:
+                 - (코드 커버리지 상태 요약)
+
+              #### 개선 권장사항
+              - (전반적인 개선 방향 제시)
+
+              각 섹션의 끝에는 <br> 태그를 추가해 주세요.
+
+              <quality_reports>
+              ${quality_output}
+              </quality_reports>`;
+
             try {
               const result = await model.generateContent(prompt);
               const response = await result.response;
               const text = await response.text();
 
               if (!text || text.trim().length === 0) {
-                console.log('❌ Gemini API 응답이 비어 있습니다.');
-                throw new Error('Gemini API 응답이 비어 있습니다.');
+                console.log("❌ Gemini API 응답이 비어 있습니다.");
+                throw new Error("Gemini API 응답이 비어 있습니다.");
               }
 
               fs.writeFileSync('review_result.txt', text);
-              console.log('✅ Gemini API 응답을 review_result.txt 파일에 저장했습니다.');
+              console.log("✅ Gemini API 응답을 review_result.txt 파일에 저장했습니다.");
             } catch (error) {
-              console.error('❌ Gemini API 요청 중 오류 발생:', error);
+              console.error("❌ Gemini API 요청 중 오류 발생:", error);
               process.exit(1);
             }
-          }
-
-          generateReview();
-          "
 
       - name: Format PR Review Summary for Comment
-        id: store-comment
+        id: store
         run: |
           COMMENT_STRING=$(cat review_result.txt)
-
           echo "comment<<EOF" >> $GITHUB_OUTPUT
-          echo "# 코드 품질 AI PR 요약" >> $GITHUB_OUTPUT
-          echo "$COMMENT_STRING" >> $GITHUB_OUTPUT
+          echo "# AI 코드 품질 검사 요약" >> $GITHUB_OUTPUT
+          echo -e "$COMMENT_STRING" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
 
       - name: Post PR Summary Comment
         uses: mshick/add-pr-comment@v2
         with:
-          message: ${{ steps.store-comment.outputs.comment }}
+          message: ${{ steps.store.outputs.comment }}
           repo-token: ${{ secrets.GITHUB_TOKEN }}
