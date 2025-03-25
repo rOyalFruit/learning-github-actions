@@ -70,7 +70,7 @@ jobs:
         if: matrix.tool == 'checkstyle'
         run: |
           mkdir -p ./quality-reports
-          cp -R **/build/reports/checkstyle ./quality-reports/checkstyle
+          cp -R build/reports/checkstyle ./quality-reports/checkstyle
 
       - name: Run PMD
         if: matrix.tool == 'pmd'
@@ -79,7 +79,7 @@ jobs:
         if: matrix.tool == 'pmd'
         run: |
           mkdir -p ./quality-reports
-          cp -R **/build/reports/pmd ./quality-reports/pmd
+          cp -R build/reports/pmd ./quality-reports/pmd
 
       - name: Run SpotBugs
         if: matrix.tool == 'spotbugs'
@@ -88,7 +88,7 @@ jobs:
         if: matrix.tool == 'spotbugs'
         run: |
           mkdir -p ./quality-reports
-          cp -R **/build/reports/spotbugs ./quality-reports/spotbugs
+          cp -R build/reports/spotbugs ./quality-reports/spotbugs
 
       - name: Run JaCoCo
         if: matrix.tool == 'jacoco'
@@ -124,7 +124,7 @@ jobs:
         run: npm install @google/generative-ai
 
       - name: Download quality reports
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: quality-reports
           path: ./quality-reports
