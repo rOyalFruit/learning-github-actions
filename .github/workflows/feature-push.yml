@@ -46,6 +46,9 @@ jobs:
       - name: Run PMD
         run: ./gradlew pmdMain pmdTest
 
+      - name: Run SpotBugs
+        run: ./gradlew spotbugsMain spotbugsTest
+
       - name: Publish Checkstyle report
         uses: lcollins/checkstyle-github-action@v3.1.0
         with:
@@ -56,4 +59,10 @@ jobs:
         uses: lcollins/pmd-github-action@v3.1.0
         with:
           path: '**/build/reports/pmd/**.xml'
-          title: 📝 PMD report
+          title: 🔍 PMD report
+
+      - name: Publish SpotBugs report
+        uses: lcollins/spotbugs-github-action@v3.1.0
+        with:
+          path: '**/build/reports/spotbugs/**.xml'
+          title: 🐞 SpotBugs report

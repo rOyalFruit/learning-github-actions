@@ -4,6 +4,7 @@ plugins {
     id 'io.spring.dependency-management' version '1.1.7'
     id 'checkstyle'
     id 'pmd'
+    id 'com.github.spotbugs' version '5.0.14'
 }
 
 group = 'com.ll'
@@ -65,4 +66,15 @@ pmd {
     ignoreFailures = true
     toolVersion = "7.0.0"
     ruleSetFiles = files("config/pmd/ruleset.xml")
+}
+
+spotbugs {
+    ignoreFailures = true
+}
+
+tasks.withType(com.github.spotbugs.snom.SpotBugsTask) {
+    reports {
+        xml.required = true
+        html.required = true
+    }
 }
