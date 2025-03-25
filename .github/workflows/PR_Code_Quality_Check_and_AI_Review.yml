@@ -63,50 +63,52 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-gradle-
 
+      # Checkstyle
       - name: Run Checkstyle
         if: matrix.tool == 'checkstyle'
         run: ./gradlew checkstyleMain checkstyleTest
       - name: Save Checkstyle report
         if: matrix.tool == 'checkstyle'
         run: |
-          mkdir -p ./quality-reports
-          cp -R build/reports/checkstyle/main.xml ./quality-reports/checkstyle_main
-          cp -R build/reports/checkstyle/test.xml ./quality-reports/checkstyle_test
+          mkdir -p ./quality-reports/checkstyle
+          cp -R build/reports/checkstyle/*.xml ./quality-reports/checkstyle/
 
+      # PMD
       - name: Run PMD
         if: matrix.tool == 'pmd'
         run: ./gradlew pmdMain pmdTest
       - name: Save PMD report
         if: matrix.tool == 'pmd'
         run: |
-          mkdir -p ./quality-reports
-          cp -R build/reports/pmd/main.xml ./quality-reports/pmd_main
-          cp -R build/reports/pmd/test.xml ./quality-reports/pmd_test
+          mkdir -p ./quality-reports/pmd
+          cp -R build/reports/pmd/*.xml ./quality-reports/pmd/
 
+      # SpotBugs
       - name: Run SpotBugs
         if: matrix.tool == 'spotbugs'
         run: ./gradlew spotbugsMain spotbugsTest
       - name: Save SpotBugs report
         if: matrix.tool == 'spotbugs'
         run: |
-          mkdir -p ./quality-reports
-          cp -R build/reports/spotbugs/main.xml ./quality-reports/spotbugs_main
-          cp -R build/reports/spotbugs/test.xml ./quality-reports/spotbugs_test
+          mkdir -p ./quality-reports/spotbugs
+          cp -R build/reports/spotbugs/*.xml ./quality-reports/spotbugs/
 
+      # JaCoCo
       - name: Run JaCoCo
         if: matrix.tool == 'jacoco'
         run: ./gradlew jacocoTestReport
       - name: Save JaCoCo report
         if: matrix.tool == 'jacoco'
         run: |
-          mkdir -p ./quality-reports
-          cp -R build/reports/jacoco/test/jacocoTestReport.xml ./quality-reports/jacoco
+          mkdir -p ./quality-reports/jacoco
+          cp -R build/reports/jacoco/test/jacocoTestReport.xml ./quality-reports/jacoco/
 
+      # 아티팩트 업로드 (도구별 고유 이름 사용)
       - name: Upload quality reports
         uses: actions/upload-artifact@v4
         with:
-          name: quality-reports
-          path: ./quality-reports
+          name: quality-reports-${{ matrix.tool }}  # 이름에 도구명 포함
+          path: ./quality-reports/${{ matrix.tool }}
 
   pr-summary:
     needs: code-quality
