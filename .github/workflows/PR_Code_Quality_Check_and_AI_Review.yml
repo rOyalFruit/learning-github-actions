@@ -114,10 +114,6 @@ jobs:
     needs: code-quality
     runs-on: ubuntu-latest
 
-    permissions:
-      contents: read
-      pull-requests: write
-
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v3
@@ -128,11 +124,14 @@ jobs:
       - name: Install Gemini AI Dependencies
         run: npm install @google/generative-ai
 
+      # 모든 아티팩트 다운로드
       - name: Download quality reports
-        uses: actions/download-artifact@v4
-        with:
-          name: quality-reports
-          path: ./quality-reports
+        run: |
+          mkdir -p ./quality-reports
+          for tool in checkstyle pmd spotbugs jacoco; do
+            actions/download-artifact@v4 \
+              --name quality-reports-$tool \
+              --path ./quality-reports/$tool
 
       - name: Prepare quality reports for AI
         run: |
