@@ -76,5 +76,3 @@ jobs:
           coverage_results_path: 'build/reports/jacoco/test/jacocoTestReport.xml'
           coverage_report_title: '📖 JaCoCo Coverage Report'
           skip_check_run: false
-          fail_below_threshold: false
-          publish_only_summary: false
