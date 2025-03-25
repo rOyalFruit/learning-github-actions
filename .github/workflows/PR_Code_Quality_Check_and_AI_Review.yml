@@ -100,7 +100,7 @@ jobs:
           cp -R build/reports/jacoco ./quality-reports/jacoco
 
       - name: Upload quality reports
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: quality-reports
           path: ./quality-reports
