@@ -70,7 +70,8 @@ jobs:
         if: matrix.tool == 'checkstyle'
         run: |
           mkdir -p ./quality-reports
-          cp -R build/reports/checkstyle ./quality-reports/checkstyle
+          cp -R build/reports/checkstyle/main.xml ./quality-reports/checkstyle_main
+          cp -R build/reports/checkstyle/test.xml ./quality-reports/checkstyle_test
 
       - name: Run PMD
         if: matrix.tool == 'pmd'
@@ -79,7 +80,8 @@ jobs:
         if: matrix.tool == 'pmd'
         run: |
           mkdir -p ./quality-reports
-          cp -R build/reports/pmd ./quality-reports/pmd
+          cp -R build/reports/pmd/main.xml ./quality-reports/pmd_main
+          cp -R build/reports/pmd/test.xml ./quality-reports/pmd_test
 
       - name: Run SpotBugs
         if: matrix.tool == 'spotbugs'
@@ -88,7 +90,8 @@ jobs:
         if: matrix.tool == 'spotbugs'
         run: |
           mkdir -p ./quality-reports
-          cp -R build/reports/spotbugs ./quality-reports/spotbugs
+          cp -R build/reports/spotbugs/main.xml ./quality-reports/spotbugs_main
+          cp -R build/reports/spotbugs/test.xml ./quality-reports/spotbugs_test
 
       - name: Run JaCoCo
         if: matrix.tool == 'jacoco'
@@ -97,7 +100,7 @@ jobs:
         if: matrix.tool == 'jacoco'
         run: |
           mkdir -p ./quality-reports
-          cp -R build/reports/jacoco ./quality-reports/jacoco
+          cp -R build/reports/jacoco/test/jacocoTestReport.xml ./quality-reports/jacoco
 
       - name: Upload quality reports
         uses: actions/upload-artifact@v4
