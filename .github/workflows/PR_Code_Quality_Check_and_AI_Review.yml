@@ -124,14 +124,32 @@ jobs:
       - name: Install Gemini AI Dependencies
         run: npm install @google/generative-ai
 
-      # 모든 아티팩트 다운로드
       - name: Download quality reports
-        run: |
-          mkdir -p ./quality-reports
-          for tool in checkstyle pmd spotbugs jacoco; do
-            actions/download-artifact@v4 \
-              --name quality-reports-$tool \
-              --path ./quality-reports/$tool
+        run: mkdir -p ./quality-reports
+
+      - name: Download Checkstyle reports
+        uses: actions/download-artifact@v4
+        with:
+          name: quality-reports-checkstyle
+          path: ./quality-reports/checkstyle
+
+      - name: Download PMD reports
+        uses: actions/download-artifact@v4
+        with:
+          name: quality-reports-pmd
+          path: ./quality-reports/pmd
+
+      - name: Download SpotBugs reports
+        uses: actions/download-artifact@v4
+        with:
+          name: quality-reports-spotbugs
+          path: ./quality-reports/spotbugs
+
+      - name: Download JaCoCo reports
+        uses: actions/download-artifact@v4
+        with:
+          name: quality-reports-jacoco
+          path: ./quality-reports/jacoco
 
       - name: Prepare quality reports for AI
         run: |
