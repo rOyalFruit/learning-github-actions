@@ -29,6 +29,7 @@ dependencies {
 
 tasks.named('test') {
     useJUnitPlatform()
+    finalizedBy jacocoTestReport
 }
 
 tasks.withType(Checkstyle).configureEach {
@@ -58,11 +59,6 @@ pmd {
     ruleSetFiles = files("config/pmd/ruleset.xml")
 }
 
-spotbugs {
-    ignoreFailures = true
-}
-
-
 tasks.withType(com.github.spotbugs.snom.SpotBugsTask) {
     reports {
         xml.required = true
@@ -70,7 +66,12 @@ tasks.withType(com.github.spotbugs.snom.SpotBugsTask) {
     }
 }
 
+spotbugs {
+    ignoreFailures = true
+}
+
 jacocoTestReport {
+    dependsOn test // 테스트 실행 후 리포트 생성
     reports {
         xml.required = true
         html.required = true
