@@ -8,10 +8,5 @@ public class LearningGithubActionsApplication {
 
 	public static void main(String[] args) {
 		SpringApplication.run(LearningGithubActionsApplication.class, args);
-		int a = 0;
-		int b = 1;
-		for (int i = a; i < 10; i++) {
-			System.out.println(i);
-		}
 	}
 }

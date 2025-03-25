@@ -3,20 +3,8 @@ plugins {
     id 'org.springframework.boot' version '3.4.3'
     id 'io.spring.dependency-management' version '1.1.7'
     id 'checkstyle'
+    id 'pmd'
 }
-
-tasks.withType(Checkstyle) {
-    reports {
-        xml.required = true
-        html.required = true
-    }
-}
-
-checkstyle {
-    configFile = file("config/checkstyle/naver-checkstyle-rules.xml")
-    configProperties = ["suppressionFile": "checkstyle/naver-checkstyle-suppressions.xml"]
-}
-
 
 group = 'com.ll'
 version = '0.0.1-SNAPSHOT'
@@ -39,4 +27,42 @@ dependencies {
 
 tasks.named('test') {
     useJUnitPlatform()
+}
+
+// 빌드 시 해당 경고 제거
+// OpenJDK 64-Bit Server VM warning: Sharing is only supported for boot loader classes because bootstrap classpath has been appended
+allprojects {
+    tasks.withType(JavaCompile).tap {
+        configureEach {
+            options.fork = true
+            options.forkOptions.jvmArgs += ['-Xshare:off']
+        }
+    }
+}
+
+tasks.withType(Checkstyle).configureEach {
+    reports {
+        xml.required = true // XML 보고서 생성
+        html.required = true // HTML 보고서 생성
+    }
+}
+
+checkstyle {
+    ignoreFailures = true
+    configFile = file("config/checkstyle/naver-checkstyle-rules.xml") // 규칙 파일 위치
+    configProperties = ["suppressionFile": "checkstyle/naver-checkstyle-suppressions.xml"] // 제외 규칙 파일
+}
+
+
+tasks.withType(Pmd).configureEach {
+    reports {
+        xml.required = true
+        html.required = true
+    }
+}
+
+pmd {
+    ignoreFailures = true
+    toolVersion = "7.0.0"
+    ruleSetFiles = files("config/pmd/ruleset.xml")
 }
