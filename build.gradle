@@ -5,6 +5,7 @@ plugins {
     id 'checkstyle'
     id 'pmd'
     id 'com.github.spotbugs' version '5.0.14'
+    id 'jacoco'
 }
 
 group = 'com.ll'
@@ -28,17 +29,6 @@ dependencies {
 
 tasks.named('test') {
     useJUnitPlatform()
-}
-
-// 빌드 시 해당 경고 제거
-// OpenJDK 64-Bit Server VM warning: Sharing is only supported for boot loader classes because bootstrap classpath has been appended
-allprojects {
-    tasks.withType(JavaCompile).tap {
-        configureEach {
-            options.fork = true
-            options.forkOptions.jvmArgs += ['-Xshare:off']
-        }
-    }
 }
 
 tasks.withType(Checkstyle).configureEach {
@@ -72,9 +62,58 @@ spotbugs {
     ignoreFailures = true
 }
 
+
 tasks.withType(com.github.spotbugs.snom.SpotBugsTask) {
     reports {
         xml.required = true
         html.required = true
+    }
+}
+
+jacocoTestReport {
+    reports {
+        xml.required = true
+        html.required = true
+    }
+
+    // JaCoCo가 생성하는 report에서 entity와 dto 클래스를 제외
+    afterEvaluate {
+        classDirectories.setFrom(files(classDirectories.files.collect {
+            fileTree(dir: it, exclude: [
+                    '**/entity/**',
+                    '**/dto/**',
+                    '**/*Application*',
+            ])
+        }))
+    }
+}
+
+jacocoTestCoverageVerification {
+    // 커버리지의 범위와 퍼센테이지를 설정
+    violationRules {
+        rule {
+            enabled = true // 규칙 활성화 여부
+            element = 'CLASS' // 커버리지를 체크할 단위 설정
+
+            // 코드 커버리지를 측정할 때 사용되는 지표
+            limit {
+                counter = 'LINE'
+                value = 'COVEREDRATIO'
+                minimum = 0.80
+            }
+
+            limit {
+                counter = 'BRANCH'
+                value = 'COVEREDRATIO'
+                minimum = 0.70
+            }
+
+            // 커버리지 검증 과정에서 entity와 dto 클래스를 제외
+            excludes = [
+                    '**.entity.**',
+                    '**.dto.**',
+                    '**.*Application*',  // 메인 애플리케이션 클래스
+            ]
+        }
     }
 }

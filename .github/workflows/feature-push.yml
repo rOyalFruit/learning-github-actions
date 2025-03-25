@@ -49,6 +49,9 @@ jobs:
       - name: Run SpotBugs
         run: ./gradlew spotbugsMain spotbugsTest
 
+      - name: Run JaCoCo
+        run: ./gradlew jacocoTestReport
+
       - name: Publish Checkstyle report
         uses: lcollins/checkstyle-github-action@v3.1.0
         with:
@@ -66,3 +69,10 @@ jobs:
         with:
           path: '**/build/reports/spotbugs/**.xml'
           title: 🐞 SpotBugs report
+
+      - name: Publish JaCoCo report
+        uses: PavanMudigonda/jacoco-reporter@v5.0
+        with:
+          coverage_results_path: 'build/reports/jacoco/test/jacocoTestReport.xml'
+          coverage_report_name: 'Coverage Report'
+          coverage_report_title: '📖 JaCoCo Coverage Report'
