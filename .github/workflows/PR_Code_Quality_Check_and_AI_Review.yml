@@ -4,6 +4,10 @@ on:
   pull_request:
     types: [ opened, synchronize ]  # PR이 열리거나 업데이트될 때 트리거
 
+permissions:
+  contents: read  # 리포지토리의 콘텐츠를 읽을 수 있음
+  pull-requests: write  # PR에 댓글을 작성할 수 있음
+  
 jobs:
   code-quality:
     runs-on: ubuntu-latest
@@ -79,10 +83,6 @@ jobs:
   ai-summary:
     needs: code-quality  # 코드 품질 검사 완료 후 실행됨
     runs-on: ubuntu-latest
-
-    permissions:
-      contents: read  # 리포지토리의 콘텐츠를 읽을 수 있음
-      pull-requests: write  # PR에 댓글을 작성할 수 있음
 
     steps:
       - name: Checkout Repository
