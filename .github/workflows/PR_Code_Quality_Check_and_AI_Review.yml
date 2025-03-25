@@ -31,17 +31,12 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-gradle-
 
-      - name: Run Checkstyle
-        run: ./gradlew checkstyleMain checkstyleTest
-
-      - name: Run PMD
-        run: ./gradlew pmdMain pmdTest
-
-      - name: Run SpotBugs
-        run: ./gradlew spotbugsMain spotbugsTest
-
-      - name: Run JaCoCo
-        run: ./gradlew jacocoTestReport
+      - name: Run Code Quality Checks
+        run: |
+          ./gradlew checkstyleMain checkstyleTest
+          ./gradlew pmdMain pmdTest
+          ./gradlew spotbugsMain spotbugsTest
+          ./gradlew jacocoTestReport
 
       - name: Generate Combined Report
         run: |
@@ -60,6 +55,7 @@ jobs:
         with:
           name: code-quality-report
           path: combined_report.md
+          retention-days: 1
 
   ai-review:
     needs: code-quality
@@ -74,55 +70,59 @@ jobs:
 
       - name: Set up Node.js
         uses: actions/setup-node@v3
+        with:
+          node-version: '16'
 
       - name: Install Gemini AI Dependencies
         run: npm install @google/generative-ai
 
       - name: Generate AI Review
         id: ai_review
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const fs = require("fs");
-            const { GoogleGenerativeAI } = require("@google/generative-ai");
-            
-            const report = fs.readFileSync("combined_report.md", 'utf8');
-            const genAI = new GoogleGenerativeAI("${{ secrets.GEMINI_API_KEY }}");
-            const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-            
-            const prompt = `
-            다음은 코드 품질 검사 결과입니다. 이 결과를 분석하고 주요 문제점과 개선 사항을 요약해주세요.
-            결과는 다음 형식으로 작성해주세요:
-            
-            ### 코드 품질 분석 요약
-            
-            #### 주요 문제점:
-            1. [문제점 1]
-            2. [문제점 2]
-            ...
-            
-            #### 개선 사항:
-            1. [개선 사항 1]
-            2. [개선 사항 2]
-            ...
-            
-            #### 종합 평가:
-            [전반적인 코드 품질에 대한 평가와 조언]
-            
-            ${report}
-            `;
-            
+        run: |
+          const fs = require("fs");
+          const { GoogleGenerativeAI } = require("@google/generative-ai");
+          
+          const report = fs.readFileSync("combined_report.md", 'utf8');
+          const genAI = new GoogleGenerativeAI("${{ secrets.GEMINI_API_KEY }}");
+          const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+          
+          const prompt = `
+          다음은 코드 품질 검사 결과입니다. 이 결과를 분석하고 주요 문제점과 개선 사항을 요약해주세요.
+          결과는 다음 형식으로 작성해주세요:
+          
+          ### 코드 품질 분석 요약
+          
+          #### 주요 문제점:
+          1. [문제점 1]
+          2. [문제점 2]
+          ...
+          
+          #### 개선 사항:
+          1. [개선 사항 1]
+          2. [개선 사항 2]
+          ...
+          
+          #### 종합 평가:
+          [전반적인 코드 품질에 대한 평가와 조언]
+          
+          ${report}
+          `;
+          
+          async function generateReview() {
             try {
               const result = await model.generateContent(prompt);
               const response = await result.response;
               const text = response.text();
-            
+          
               fs.writeFileSync('ai_review.md', text);
               console.log("AI 리뷰 생성 완료");
             } catch (error) {
               console.error("AI 리뷰 생성 중 오류 발생:", error);
               process.exit(1);
             }
+          }
+          
+          generateReview();
 
       - name: Comment PR
         uses: actions/github-script@v7
