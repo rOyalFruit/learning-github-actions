@@ -126,6 +126,8 @@ jobs:
           node -e "
           const fs = require('fs');
           const { GoogleGenerativeAI } = require('@google/generative-ai');
+          const genAI = new GoogleGenerativeAI("${{ secrets.GEMINI_API_KEY }}");  // Gemini API 키로 생성자 인스턴스 생성
+          const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });  // Gemini 모델 설정
 
           const readReport = (filePath) => {
             try {
@@ -142,10 +144,6 @@ jobs:
             spotbugs: readReport('build/reports/spotbugs/main.xml'),
             jacoco: readReport('build/reports/jacoco/test/jacocoTestReport.xml'),
           };
-
-          const { GoogleGenerativeAI } = require("@google/generative-ai");
-          const genAI = new GoogleGenerativeAI("${{ secrets.GEMINI_API_KEY }}");  // Gemini API 키로 생성자 인스턴스 생성
-          const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });  // Gemini 모델 설정
 
           const prompt = \`
             다음 정보를 기반으로 코드 품질 검사 결과를 분석해주세요.
