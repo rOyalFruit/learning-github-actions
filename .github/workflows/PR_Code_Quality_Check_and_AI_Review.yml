@@ -77,13 +77,14 @@ jobs:
         run: npm install @google/generative-ai
 
       - name: Generate AI Review
-        id: ai_review
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: |
           const fs = require("fs");
           const { GoogleGenerativeAI } = require("@google/generative-ai");
           
           const report = fs.readFileSync("combined_report.md", 'utf8');
-          const genAI = new GoogleGenerativeAI("${{ secrets.GEMINI_API_KEY }}");
+          const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
           const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
           
           const prompt = `
