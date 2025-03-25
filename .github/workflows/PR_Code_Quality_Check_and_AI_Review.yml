@@ -7,6 +7,7 @@ on:
 permissions:
   contents: read  # 리포지토리의 콘텐츠를 읽을 수 있음
   pull-requests: write  # PR에 댓글을 작성할 수 있음
+  checks: write
 
 jobs:
   build-test:
