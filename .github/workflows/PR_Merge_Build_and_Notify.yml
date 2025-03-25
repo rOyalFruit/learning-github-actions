@@ -42,64 +42,8 @@ jobs:
                   "text": "PR Merge 후 빌드 실패 :x:",
                   "fields": [
                     {
-                      "title": "Repository",
-                      "value": "${{ github.repository }}",
-                      "short": true
-                    },
-                    {
                       "title": "Branch",
                       "value": "${{ github.ref_name }}",
-                      "short": true
-                    },
-                    {
-                      "title": "PR Number",
-                      "value": "#${{ github.event.pull_request.number }}",
-                      "short": true
-                    },
-                    {
-                      "title": "PR Title",
-                      "value": "${{ github.event.pull_request.title }}",
-                      "short": true
-                    },
-                    {
-                      "title": "Workflow",
-                      "value": "<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Workflow Run>",
-                      "short": false
-                    }
-                  ]      
-                }
-              ]
-            }
-        env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
-          SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
-
-      - name: Notify Slack on Success
-        if: success() # 이 step은 job이 성공한 경우에만 실행됩니다.
-        id: slack-success
-        uses: slackapi/slack-github-action@v1.24.0
-        with:
-          payload: |
-            {
-              "attachments": [
-                {
-                  "title": "${{ github.repository }}", 
-                  "title_link": "https://github.com/${{github.repository}}", 
-                  "text": "PR Merge 후 빌드 성공 :o:",
-                  "fields": [
-                    {
-                      "title": "Repository",
-                      "value": "${{ github.repository }}",
-                      "short": true
-                    },
-                    {
-                      "title": "Branch",
-                      "value": "${{ github.ref_name }}",
-                      "short": true
-                    },
-                    {
-                      "title": "PR Number",
-                      "value": "#${{ github.event.pull_request.number }}",
                       "short": true
                     },
                     {
