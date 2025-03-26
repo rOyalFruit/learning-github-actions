@@ -12,6 +12,11 @@ jobs:
     if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
 
+    permissions:
+      security-events: write  # CodeQL 결과를 보안 이벤트로 업로드하기 위해 필요
+      actions: read
+      contents: read
+
     steps:
       - uses: actions/checkout@v3
         with:
