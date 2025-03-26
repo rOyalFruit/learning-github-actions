@@ -42,7 +42,7 @@ jobs:
 
             const { GoogleGenerativeAI } = require("@google/generative-ai");
             const genAI = new GoogleGenerativeAI("${{ secrets.GEMINI_API_KEY }}");  // Gemini API 키로 생성자 인스턴스 생성
-            const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });  // Gemini 모델 설정
+            const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });  // Gemini 모델 설정
 
             let prompt = `
               다음은 깃허브 PR 에 올라온 수정된 코드들 입니다.
