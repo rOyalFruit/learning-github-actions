@@ -35,7 +35,7 @@ jobs:
         uses: github/codeql-action/init@v3
         with:
           languages: java  # 필요에 따라 javascript, python 등 추가 가능
-          queries: security-extended  # 또는 security-and-quality
+          queries: security-and-quality  # 또는 security-and-quality
 
       - name: Build with Gradle
         run: ./gradlew build
