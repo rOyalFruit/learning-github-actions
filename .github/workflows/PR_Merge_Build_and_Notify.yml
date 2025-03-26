@@ -48,6 +48,25 @@ jobs:
         id: codeql
         continue-on-error: true  # CodeQL 실패 시에도 워크플로우 계속 진행 (Slack 알림용)
 
+      # CodeQL 보안 취약점 확인
+      - name: Check for CodeQL Security Issues
+        if: steps.build.outcome == 'success' && steps.codeql.outcome == 'success'
+        id: check_security_issues
+        run: |
+          # GitHub API를 사용하여 코드 스캐닝 알림 확인
+          ALERTS=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            "https://api.github.com/repos/${{ github.repository }}/code-scanning/alerts?state=open")
+          
+          # 열린 알림 수 계산
+          ALERT_COUNT=$(echo $ALERTS | jq length)
+          
+          echo "Security alert count: $ALERT_COUNT"
+          echo "alert_count=$ALERT_COUNT" >> $GITHUB_OUTPUT
+          
+          if [ "$ALERT_COUNT" -gt 0 ]; then
+            echo "Security vulnerabilities found!"
+          fi
+
       # 빌드 실패 시 Slack 알림
       - name: Notify Slack on Build Failure
         if: steps.build.outcome == 'failure'
@@ -132,19 +151,19 @@ jobs:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
           SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
 
-      # 모든 작업 성공 시 Slack 알림
-      - name: Notify Slack on Success
-        if: steps.build.outcome == 'success' && (steps.codeql.outcome == 'success' || steps.codeql.outcome == 'skipped')
+      # 보안 취약점 발견 시 Slack 알림
+      - name: Notify Slack on Security Vulnerabilities
+        if: steps.check_security_issues.outputs.alert_count > 0
         uses: slackapi/slack-github-action@v1.24.0
         with:
           payload: |
             {
               "attachments": [
                 {
-                  "color": "#36a64f", 
+                  "color": "#ff9900", 
                   "title": "${{ github.repository }}", 
                   "title_link": "https://github.com/${{github.repository}}", 
-                  "text": "PR Merge 후 빌드 및 CodeQL 분석 성공 :white_check_mark:",
+                  "text": "PR Merge 후 CodeQL 분석에서 보안 취약점 발견 :warning:",
                   "fields": [
                     {
                       "title": "Branch",
@@ -160,6 +179,16 @@ jobs:
                       "title": "Merged By",
                       "value": "${{ github.event.pull_request.merged_by.login }}",
                       "short": true
+                    },
+                    {
+                      "title": "취약점 수",
+                      "value": "${{ steps.check_security_issues.outputs.alert_count }}개",
+                      "short": true
+                    },
+                    {
+                      "title": "보안 취약점 확인",
+                      "value": "<${{ github.server_url }}/${{ github.repository }}/security/code-scanning|Security Dashboard에서 확인>",
+                      "short": false
                     },
                     {
                       "title": "Workflow",
