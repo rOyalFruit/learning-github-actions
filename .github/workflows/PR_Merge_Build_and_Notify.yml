@@ -34,13 +34,13 @@ jobs:
       # 빌드 성공 시에만 CodeQL 분석 실행
       - name: Initialize CodeQL
         if: steps.build.outcome == 'success'
-        uses: github/codeql-action/init@v2
+        uses: github/codeql-action/init@v3
         with:
           languages: java  # 필요에 따라 javascript, python 등 추가 가능
 
       - name: Perform CodeQL Analysis
         if: steps.build.outcome == 'success'
-        uses: github/codeql-action/analyze@v2
+        uses: github/codeql-action/analyze@v3
         id: codeql
         continue-on-error: true  # CodeQL 실패 시에도 워크플로우 계속 진행 (Slack 알림용)
 
