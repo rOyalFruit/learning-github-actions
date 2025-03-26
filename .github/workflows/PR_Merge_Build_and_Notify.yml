@@ -32,7 +32,6 @@ jobs:
         run: chmod +x gradlew
 
       - name: Initialize CodeQL
-        if: steps.build.outcome == 'success'
         uses: github/codeql-action/init@v3
         with:
           languages: java  # 필요에 따라 javascript, python 등 추가 가능
