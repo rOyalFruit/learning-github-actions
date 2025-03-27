@@ -8,6 +8,8 @@ on:
   push:
     branches:
       - 'feat/**'
+      - dev
+      - main
 
 jobs:
   build:
@@ -25,6 +27,7 @@ jobs:
             echo "bump_type=major" >> $GITHUB_ENV
           else
             echo "bump_type=patch" >> $GITHUB_ENV # Default to patch if no condition matches
+          fi
       - name: Bump version and push tag
         id: tag_version
         uses: mathieudutour/github-tag-action@v6.2
