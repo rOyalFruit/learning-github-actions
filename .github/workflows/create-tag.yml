@@ -1,36 +1,27 @@
-name: Create Tag
-
-permissions:
-  contents: write
-  checks: write
+name: Bump version
 
 on:
   push:
     branches:
-      - 'feat/**'
-      - dev
       - main
-
 jobs:
-  build:
+  create-tag-and-release:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Determine bump type
-        id: determine_bump
-        run: |
-          if [[ "${GITHUB_REF##*/}" == feat/* ]]; then
-            echo "bump_type=patch" >> $GITHUB_ENV
-          elif [[ "${GITHUB_REF##*/}" == dev ]]; then
-            echo "bump_type=minor" >> $GITHUB_ENV
-          elif [[ "${GITHUB_REF##*/}" == main ]]; then
-            echo "bump_type=major" >> $GITHUB_ENV
-          else
-            echo "bump_type=patch" >> $GITHUB_ENV # Default to patch if no condition matches
-          fi
-      - name: Bump version and push tag
-        id: tag_version
+      - name: Create Tag
+        id: create_tag
         uses: mathieudutour/github-tag-action@v6.2
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          default_bump: ${{ env.bump_type }}
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ steps.create_tag.outputs.new_tag }}
+          release_name: Release ${{ steps.create_tag.outputs.new_tag }}
+          body: ${{ steps.create_tag.outputs.changelog }}
+          draft: false
+          prerelease: false
