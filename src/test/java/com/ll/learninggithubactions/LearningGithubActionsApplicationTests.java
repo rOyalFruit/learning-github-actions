@@ -8,7 +8,7 @@ class LearningGithubActionsApplicationTests {
 
 	@Test
 	void contextLoads() {
-		System.out.println("test context loadesd");
+		System.out.println("test context loadsd");
 	}
 
 }
