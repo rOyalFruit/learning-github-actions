@@ -72,7 +72,7 @@ jobs:
             ((minor++))
             patch=0
             count_part=0
-          elif [[ "${{ env.branch_name }}" =~ ^feat.* ]]; then
+          elif [[ "${{ env.branch_name }}" == feat/* ]]; then
             ((patch++))
             count_part=0
           else
