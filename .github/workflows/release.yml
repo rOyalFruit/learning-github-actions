@@ -3,6 +3,10 @@ on:
   push:
     branches:
       - main
+
+permissions:
+  contents: write
+
 jobs:
   makeTagAndRelease:
     runs-on: ubuntu-latest
