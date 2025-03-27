@@ -6,12 +6,6 @@ on:
       - feat/**
       - dev
       - main
-  pull_request:
-    types:
-      - closed
-    branches:
-      - dev
-      - main
 
 permissions:
   contents: write
@@ -28,9 +22,11 @@ jobs:
       - name: Determine version bump
         id: version_bump
         run: |
-          if [[ "$GITHUB_REF" == refs/heads/main || "$GITHUB_BASE_REF" == "main" ]]; then
+          BRANCH="${GITHUB_REF#refs/heads/}"
+          
+          if [[ "$BRANCH" == "main" ]]; then
             echo "level=major" >> $GITHUB_ENV
-          elif [[ "$GITHUB_REF" == refs/heads/dev || "$GITHUB_BASE_REF" == "dev" ]]; then
+          elif [[ "$BRANCH" == "dev" ]]; then
             echo "level=minor" >> $GITHUB_ENV
           else
             echo "level=patch" >> $GITHUB_ENV
