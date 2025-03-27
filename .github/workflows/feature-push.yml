@@ -1,7 +1,7 @@
 name: Feature Branch Push
 
 permissions:
-  contents: write
+  contents: read
   checks: write
 
 on:
@@ -36,16 +36,6 @@ jobs:
         id: build
         run: ./gradlew build test
         continue-on-error: true
-
-  create-tag:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Bump version and push tag
-        uses: mathieudutour/github-tag-action@v6.2
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          default_bump: patch
 
   code-quality:
     needs: build-test
