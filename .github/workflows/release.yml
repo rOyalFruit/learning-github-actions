@@ -127,3 +127,99 @@ jobs:
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
           SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
+
+#  deploy_to_ec2:
+#    needs: [ docker_build_and_push, create_release ]
+#    runs-on: ubuntu-latest
+#    steps:
+#      - name: set lower case owner name
+#        run: |
+#          echo "OWNER_LC=${OWNER,,}" >> ${GITHUB_ENV}
+#        env:
+#          OWNER: '${{ github.repository_owner }}'
+#
+#      - name: Deploy to EC2 via SSH
+#        uses: appleboy/ssh-action@v1
+#        with:
+#          host: ${{ secrets.EC2_HOST }}
+#          username: ec2-user
+#          key: ${{ secrets.EC2_SSH_KEY }}
+#          script: |
+#            docker pull ghcr.io/${{ env.OWNER_LC }}/deploy:${{ needs.create_release.outputs.new_tag }}
+#            docker stop springboot-app || true
+#            docker rm springboot-app || true
+#            docker run -d -p 8080:8080 --name springboot-app ghcr.io/${{ env.OWNER_LC }}/deploy:${{ needs.create_release.outputs.new_tag }}
+#            echo "배포 완료: 버전 ${{ needs.create_release.outputs.new_tag }}"
+#
+#      # 배포 성공 시 슬랙 알림
+#      - name: Notify Slack on Success
+#        uses: slackapi/slack-github-action@v1.24.0
+#        with:
+#          payload: |
+#            {
+#              "attachments": [
+#                {
+#                  "color": "#36a64f",
+#                  "title": "${{ github.repository }}",
+#                  "title_link": "https://github.com/${{ github.repository }}",
+#                  "text": "EC2 배포 성공 :white_check_mark:",
+#                  "fields": [
+#                    {
+#                      "title": "버전",
+#                      "value": "${{ needs.create_release.outputs.new_tag }}",
+#                      "short": true
+#                    },
+#                    {
+#                      "title": "Branch",
+#                      "value": "${{ github.ref_name }}",
+#                      "short": true
+#                    },
+#                    {
+#                      "title": "Workflow",
+#                      "value": "<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Workflow Run>",
+#                      "short": false
+#                    }
+#                  ]
+#                }
+#              ]
+#            }
+#        env:
+#          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+#          SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
+#
+#      # 배포 실패 시 슬랙 알림
+#      - name: Notify Slack on Failure
+#        if: failure()
+#        uses: slackapi/slack-github-action@v1.24.0
+#        with:
+#          payload: |
+#            {
+#              "attachments": [
+#                {
+#                  "color": "#ff0000",
+#                  "title": "${{ github.repository }}",
+#                  "title_link": "https://github.com/${{ github.repository }}",
+#                  "text": "EC2 배포 실패 :x:",
+#                  "fields": [
+#                    {
+#                      "title": "버전",
+#                      "value": "${{ needs.create_release.outputs.new_tag }}",
+#                      "short": true
+#                    },
+#                    {
+#                      "title": "Branch",
+#                      "value": "${{ github.ref_name }}",
+#                      "short": true
+#                    },
+#                    {
+#                      "title": "Workflow",
+#                      "value": "<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Workflow Run>",
+#                      "short": false
+#                    }
+#                  ]
+#                }
+#              ]
+#            }
+#        env:
+#          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+#          SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
