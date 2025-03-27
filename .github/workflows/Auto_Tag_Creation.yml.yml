@@ -33,53 +33,48 @@ jobs:
           echo "GITHUB_REF: $GITHUB_REF"
           branch_name="${GITHUB_REF#refs/heads/}"
           echo "Extracted Branch Name: $branch_name"
+          echo "branch_name=$branch_name" >> $GITHUB_ENV
 
       - name: Parse Version
         id: version
         run: |
-          # 태그에서 'v' 제거
           clean_tag=$(echo "${{ env.latest_tag }}" | sed -E 's/^v//')
           
-          # 버전과 브랜치, 카운트 분리 (vX.Y.Z-브랜치.N)
-          version_part=$(echo "$clean_tag" | cut -d '-' -f1)  # vX.Y.Z
-          branch_part=$(echo "$clean_tag" | cut -d '-' -f2 | cut -d '.' -f1)  # 브랜치명
-          count_part=$(echo "$clean_tag" | cut -d '.' -f2)  # 브랜치 내 카운트
+          version_part=$(echo "$clean_tag" | cut -d '-' -f1)
+          remainder=$(echo "$clean_tag" | cut -d '-' -f2-)
+          branch_part=$(echo "$remainder" | rev | cut -d '.' -f2- | rev)
+          count_part=$(echo "$remainder" | rev | cut -d '.' -f1 | rev)
           
-          # 기본값 설정 (최초 태그일 경우)
           if [[ -z "$version_part" ]]; then version_part="0.0.0"; fi
-          if [[ -z "$branch_part" ]]; then branch_part="${GITHUB_REF#refs/heads/}"; fi
+          if [[ -z "$branch_part" ]]; then branch_part="${{ env.branch_name }}"; fi
           if [[ -z "$count_part" ]]; then count_part=0; fi
           
-          # 버전 숫자 분리
           IFS='.' read -r major minor patch <<< "$version_part"
-          branch_name="${GITHUB_REF#refs/heads/}"
+          branch_name_clean=$(echo "${{ env.branch_name }}" | sed 's/\//-/g')
           
           echo "Current version: $major.$minor.$patch-$branch_part.$count_part"
-          echo "Branch Name: '$branch_name'"
+          echo "Branch Name: '$branch_name_clean'"
           
-          # 브랜치에 따라 버전 증가
-          if [[ "$branch_name" == "main" ]]; then
+          if [[ "${{ env.branch_name }}" == "main" ]]; then
             ((major++))
             minor=0
             patch=0
-            count_part=0  # main에서 새로운 버전 시작 시 count 리셋
-          elif [[ "$branch_name" == "dev" ]]; then
+            count_part=0
+          elif [[ "${{ env.branch_name }}" == "dev" ]]; then
             ((minor++))
             patch=0
-            count_part=0  # dev에서 새로운 버전 시작 시 count 리셋
-          elif [[ "$branch_name" == feat/* ]]; then
+            count_part=0
+          elif [[ "${{ env.branch_name }}" == feat/* || "${{ env.branch_name }}" == "feat-"* ]]; then
             ((patch++))
-            count_part=0  # feat에서 새로운 버전 시작 시 count 리셋
+            count_part=0
           else
             echo "Branch does not match any known pattern. Exiting."
             exit 1
           fi
           
-          # 브랜치에서의 count 증가
           ((count_part++))
           
-          # 새로운 태그 생성
-          new_tag="v$major.$minor.$patch-$branch_part.$count_part"
+          new_tag="v$major.$minor.$patch-$branch_name_clean.$count_part"
           echo "New version: $new_tag"
           echo "new_tag=$new_tag" >> $GITHUB_ENV
 
@@ -91,7 +86,6 @@ jobs:
           git tag ${{ env.new_tag }}
           git push origin ${{ env.new_tag }}
 
-      # 태그 생성 실패 시 Slack 알림
       - name: Notify Slack on Tag Creation Failure
         if: failure()
         uses: slackapi/slack-github-action@v1.24.0
