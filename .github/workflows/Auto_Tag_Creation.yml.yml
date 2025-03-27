@@ -39,23 +39,23 @@ jobs:
         run: |
           # 태그에서 'v' 제거
           clean_tag=$(echo "${{ env.latest_tag }}" | sed -E 's/^v//')
-
+          
           # 버전과 브랜치, 카운트 분리 (vX.Y.Z-브랜치.N)
           version_part=$(echo "$clean_tag" | cut -d '-' -f1)  # vX.Y.Z
           branch_part=$(echo "$clean_tag" | cut -d '-' -f2 | cut -d '.' -f1)  # 브랜치명
           count_part=$(echo "$clean_tag" | cut -d '.' -f2)  # 브랜치 내 카운트
-
+          
           # 기본값 설정 (최초 태그일 경우)
           if [[ -z "$version_part" ]]; then version_part="0.0.0"; fi
           if [[ -z "$branch_part" ]]; then branch_part="${GITHUB_REF#refs/heads/}"; fi
           if [[ -z "$count_part" ]]; then count_part=0; fi
-
+          
           # 버전 숫자 분리
           IFS='.' read -r major minor patch <<< "$version_part"
           branch_name="${GITHUB_REF#refs/heads/}"
-
+          
           echo "Current version: $major.$minor.$patch-$branch_part.$count_part"
-
+          
           # 브랜치에 따라 버전 증가
           if [[ "$branch_name" == "main" ]]; then
             ((major++))
@@ -69,11 +69,14 @@ jobs:
           elif [[ "$branch_name" == feat/* ]]; then
             ((patch++))
             count_part=0  # feat에서 새로운 버전 시작 시 count 리셋
+          else
+            echo "Branch does not match any known pattern. Exiting."
+            exit 1
           fi
-
+          
           # 브랜치에서의 count 증가
           ((count_part++))
-
+          
           # 새로운 태그 생성
           new_tag="v$major.$minor.$patch-$branch_part.$count_part"
           echo "New version: $new_tag"
