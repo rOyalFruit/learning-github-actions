@@ -176,7 +176,7 @@ jobs:
 
             const { GoogleGenerativeAI } = require("@google/generative-ai");
             const genAI = new GoogleGenerativeAI("${{ secrets.GEMINI_API_KEY }}");
-            const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+            const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 
             let prompt = `
               다음은 깃허브 PR에 대한 코드 품질 검사 결과입니다.
