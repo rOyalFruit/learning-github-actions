@@ -39,22 +39,30 @@ jobs:
         id: version
         run: |
           clean_tag=$(echo "${{ env.latest_tag }}" | sed -E 's/^v//')
-          
+
+          # 버전 부분 추출 (X.Y.Z)
           version_part=$(echo "$clean_tag" | cut -d '-' -f1)
-          remainder=$(echo "$clean_tag" | cut -d '-' -f2-)
-          branch_part=$(echo "$remainder" | rev | cut -d '.' -f2- | rev)
-          count_part=$(echo "$remainder" | rev | cut -d '.' -f1 | rev)
-          
+
+          # 나머지 부분 처리
+          remainder=$(echo "$clean_tag" | sed "s/^$version_part-//")
+
+          # 브랜치 부분과 카운트 부분 분리
+          branch_part=$(echo "$remainder" | sed 's/\.[0-9]*$//')
+          count_part=$(echo "$remainder" | grep -o '[0-9]*$')
+
+          # 기본값 설정
           if [[ -z "$version_part" ]]; then version_part="0.0.0"; fi
           if [[ -z "$branch_part" ]]; then branch_part="${{ env.branch_name }}"; fi
           if [[ -z "$count_part" ]]; then count_part=0; fi
-          
+
+          # 버전 숫자 분리
           IFS='.' read -r major minor patch <<< "$version_part"
           branch_name_clean=$(echo "${{ env.branch_name }}" | sed 's/\//-/g')
-          
+
           echo "Current version: $major.$minor.$patch-$branch_part.$count_part"
           echo "Branch Name: '$branch_name_clean'"
-          
+
+          # 브랜치에 따른 버전 증가 로직
           if [[ "${{ env.branch_name }}" == "main" ]]; then
             ((major++))
             minor=0
@@ -64,16 +72,16 @@ jobs:
             ((minor++))
             patch=0
             count_part=0
-          elif [[ "${{ env.branch_name }}" == feat/* || "${{ env.branch_name }}" == "feat-"* ]]; then
+          elif [[ "${{ env.branch_name }}" =~ ^feat.* ]]; then
             ((patch++))
             count_part=0
           else
             echo "Branch does not match any known pattern. Exiting."
             exit 1
           fi
-          
+
           ((count_part++))
-          
+
           new_tag="v$major.$minor.$patch-$branch_name_clean.$count_part"
           echo "New version: $new_tag"
           echo "new_tag=$new_tag" >> $GITHUB_ENV
