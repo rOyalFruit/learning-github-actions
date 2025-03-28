@@ -1,0 +1,246 @@
+name: Build Docker Image and Push to ghcr.io
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      - name: Build with Gradle Wrapper
+        run: ./gradlew build
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-artifact
+          path: build/libs/*.jar
+
+  create_release:
+    needs: build
+    runs-on: ubuntu-latest
+    outputs:
+      new_tag: ${{ steps.create_tag.outputs.new_tag }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Create Tag
+        id: create_tag
+        uses: mathieudutour/github-tag-action@v6.2
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ steps.create_tag.outputs.new_tag }}
+          name: Release ${{ steps.create_tag.outputs.new_tag }}
+          body: ${{ steps.create_tag.outputs.changelog }}
+          draft: false
+          prerelease: false
+
+  docker_build_and_push:
+    needs: create_release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: build-artifact
+          path: build/libs
+
+      - name: Install Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Registry Login
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: set lower case owner name
+        run: |
+          echo "OWNER_LC=${OWNER,,}" >> ${GITHUB_ENV}
+        env:
+          OWNER: '${{ github.repository_owner }}'
+
+      - name: Build and Push
+        uses: docker/build-push-action@v3
+        with:
+          context: .
+          push: true
+          tags: |
+            ghcr.io/${{ env.OWNER_LC }}/dopdang:${{ needs.create_release.outputs.new_tag }},
+            ghcr.io/${{ env.OWNER_LC }}/dopdang:latest
+
+      # 실패 시 슬랙 알림
+      - name: Notify Slack on Failure
+        if: failure()
+        uses: slackapi/slack-github-action@v1.24.0
+        with:
+          payload: |
+            {
+              "attachments": [
+                {
+                  "color": "#ff0000",
+                  "title": "${{ github.repository }}",
+                  "title_link": "https://github.com/${{ github.repository }}",
+                  "text": "배포 실패 :x:",
+                  "fields": [
+                    {
+                      "title": "Branch",
+                      "value": "${{ github.ref_name }}",
+                      "short": true
+                    },
+                    {
+                      "title": "Workflow",
+                      "value": "<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Workflow Run>",
+                      "short": false
+                    }
+                  ]
+                }
+              ]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
+
+  deploy_to_ec2:
+    needs: [ docker_build_and_push, create_release ]
+    runs-on: ubuntu-latest
+    steps:
+      - name: set lower case owner name
+        run: |
+          echo "OWNER_LC=${OWNER,,}" >> ${GITHUB_ENV}
+        env:
+          OWNER: '${{ github.repository_owner }}'
+
+      - name: Deploy to EC2 via SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ec2-user
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            echo "===== SSH 연결 성공! EC2 인스턴스 정보 ====="
+            echo "호스트명: $(hostname)"
+            echo "현재 사용자: $(whoami)"
+            echo "운영체제 정보: $(cat /etc/os-release | grep PRETTY_NAME)"
+            echo "현재 시간: $(date)"
+            echo "============================================="
+
+            echo "도커 이미지 경로: ghcr.io/${{ env.OWNER_LC }}/dopdang:${{ needs.create_release.outputs.new_tag }}"
+            echo "GitHub Container Registry에 로그인 시도..."
+
+            # 안전한 방식으로 도커 로그인 (비밀번호를 명령줄에 직접 노출하지 않음)
+            echo "${{ secrets.GHCR_TOKEN }}" | sudo docker login ghcr.io -u ${{ secrets.GHCR_USERNAME }} --password-stdin
+
+            # sudo를 사용하여 도커 명령어 실행
+            sudo docker pull ghcr.io/${{ env.OWNER_LC }}/dopdang:${{ needs.create_release.outputs.new_tag }}
+            sudo docker stop springboot-app || true
+            sudo docker rm springboot-app || true
+            sudo docker run -d -p 8080:8080 \
+              -e DB_ID=${{ secrets.DB_ID }} \
+              -e DB_PW=${{ secrets.DB_PW }} \
+              -e DB_URL=${{ secrets.DB_URL }} \
+              -e REDIS_HOST=${{ secrets.REDIS_HOST }} \
+              -e REDIS_PW=${{ secrets.REDIS_PW }} \
+              --name springboot-app \
+              ghcr.io/${{ env.OWNER_LC }}/dopdang:${{ needs.create_release.outputs.new_tag }}
+            echo "배포 완료: 버전 ${{ needs.create_release.outputs.new_tag }}"
+
+      # 배포 성공 시 슬랙 알림
+      - name: Notify Slack on Success
+        uses: slackapi/slack-github-action@v1.24.0
+        with:
+          payload: |
+            {
+              "attachments": [
+                {
+                  "color": "#36a64f",
+                  "title": "${{ github.repository }}",
+                  "title_link": "https://github.com/${{ github.repository }}",
+                  "text": "EC2 배포 성공 :white_check_mark:",
+                  "fields": [
+                    {
+                      "title": "버전",
+                      "value": "${{ needs.create_release.outputs.new_tag }}",
+                      "short": true
+                    },
+                    {
+                      "title": "Branch",
+                      "value": "${{ github.ref_name }}",
+                      "short": true
+                    },
+                    {
+                      "title": "Workflow",
+                      "value": "<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Workflow Run>",
+                      "short": false
+                    }
+                  ]
+                }
+              ]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL_SUCCESS }}
+          SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
+
+      # 배포 실패 시 슬랙 알림
+      - name: Notify Slack on Failure
+        if: failure()
+        uses: slackapi/slack-github-action@v1.24.0
+        with:
+          payload: |
+            {
+              "attachments": [
+                {
+                  "color": "#ff0000",
+                  "title": "${{ github.repository }}",
+                  "title_link": "https://github.com/${{ github.repository }}",
+                  "text": "EC2 배포 실패 :x:",
+                  "fields": [
+                    {
+                      "title": "버전",
+                      "value": "${{ needs.create_release.outputs.new_tag }}",
+                      "short": true
+                    },
+                    {
+                      "title": "Branch",
+                      "value": "${{ github.ref_name }}",
+                      "short": true
+                    },
+                    {
+                      "title": "Workflow",
+                      "value": "<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Workflow Run>",
+                      "short": false
+                    }
+                  ]
+                }
+              ]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
