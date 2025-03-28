@@ -15,7 +15,7 @@ public class BuggyClass {
 
 	// DLS_DEAD_LOCAL_STORE: Dead store to local variable
 	public void deadStoreBug() {
-		int x = 10;
+		int x = 101;
 		x = 20; // x = 10은 사용되지 않음
 		System.out.println(x);
 	}
